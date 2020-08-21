@@ -30,7 +30,7 @@ ENV PATH /usr/src/app/bin:$PATH
 RUN bundle config --global silence_root_warning 1
 
 EXPOSE 3000
-CMD ["bundle", "exec", "hanami", "server", "-b", "0.0.0.0", "-p", "3000"]
+CMD ["bundle", "exec", "hanami", "server", "--host=0.0.0.0", "--port=3000"]
 
 FROM development AS production
 
