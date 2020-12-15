@@ -10,8 +10,8 @@ x-app: &app
     context: .
     dockerfile: Dockerfile
     target: development
-  env_file:
-    - .env
+  tmpfs:
+    - /tmp
   environment:
     REDIS_URL: redis://@redis:6379/1
     DATABASE_URL: postgres://postgres:postgres@postgres:5432/
@@ -30,44 +30,31 @@ services:
     image: postgres:12.3-alpine
     mem_limit: 64m
     volumes:
+      - ./log:/root/log:cached
       - postgresql:/var/lib/postgresql/data:delegated
-      # Alternative if you want to store your postgres data outside of a volume
-      #- ~/.docker-data/hanami-app/postgresql:/var/lib/postgresql/data:delegated
-    # ports:
-    #  - 5432
+    ports:
+      - "127.0.0.1:5432:5432"
     environment:
+      PSQL_HISTFILE: /root/log/.psql_history
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     restart: on-failure
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 2s
+      retries: 10
     logging:
       driver: none
 
   redis:
     image: redis:4.0.14-alpine
     mem_limit: 64m
-    command: >
-      --save
-      --maxmemory 128mb
-      --maxmemory-policy noeviction
-      --stop-writes-on-bgsave-error yes
-      --rdbcompression yes
-      --rdbchecksum yes
-      --dir /data
     volumes:
       - redis:/data:delegated
-    # ports:
-    #  - 6379
+    ports:
+      - "127.0.0.1:6379:6379"
     restart: on-failure
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     logging:
       driver: none
 
@@ -75,7 +62,7 @@ services:
     <<: *app
     command: bash -c "rm -rf /usr/src/app/tmp/pids/server.pid && bundle exec hanami server --port=3000 --host=0.0.0.0"
     ports:
-      - "${PORT:-3000}:3000"
+      - "127.0.0.1:${PORT:-3000}:3000"
 
 volumes:
   postgresql:
